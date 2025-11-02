@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Pro Car Game — Final (Music + Speed)</title>
+<style>
+  :root{
+    --panel-w:320px;
+    --bg1:#071226;
+    --bg2:#021018;
+    --panel:#071226;
+    --accent:#ff4b4b;
+    --muted:#9aa7b2;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Noto Sans",sans-serif;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#e6eef3;-webkit-font-smoothing:antialiased}
+  .container{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box;gap:18px}
+  .stage{
+    width: calc(100vw - var(--panel-w) - 64px);
+    max-width:980px;
+    height: calc(100vh - 120px);
+    min-height:520px;
+    background:linear-gradient(180deg,#0d1b26,#07101a);
+    border-radius:14px;
+    padding:12px;
+    box-shadow: 0 12px 40px rgba(2,6,23,.7);
+    display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+  }
+  canvas{width:100%;height:100%;border-radius:10px;background:transparent;display:block;touch-action:none}
+  .panel{
+    width:var(--panel-w);
+    min-height:300px;
+    background:linear-gradient(180deg,#071226,#06101a);
+    border-radius:12px;padding:14px;box-shadow:0 10px 30px rgba(2,6,23,.6);
+    color:#dfeef6;display:flex;flex-direction:column;gap:10px;
+  }
+  .panel h3{margin:0;font-size:18px}
+  .row{display:flex;gap:8px;align-items:center}
+  .btn{background:#0f1724;border:1px solid rgba(255,255,255,.04);color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer}
+  .btn.primary{background:linear-gradient(180deg,var(--accent),#c12b2b);box-shadow:0 6px 18px rgba(255,75,75,.12)}
+  .small{font-size:13px;padding:6px 8px}
+  label{font-size:13px;color:var(--muted)}
+  select,input[type="color"],input[type="range"]{width:100%}
+  .stat{background:#061018;padding:8px;border-radius:8px;text-align:center}
+  .stat p{margin:4px 0}
+  .overlay{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:linear-gradient(180deg,#071226,#021018);padding:26px;border-radius:12px;box-shadow:0 14px 60px rgba(0,0,0,.7);display:none;color:#fff;z-index:50}
+  .muted{opacity:.65}
+  .touchHint{position:absolute;left:10px;bottom:12px;color:#dfeef6;font-size:13px;background:#0006;padding:6px 10px;border-radius:8px}
+  .speedBtns{display:flex;gap:8px}
+  .big{font-size:18px;padding:10px 12px}
+  @media (max-width:950px){
+    .container{flex-direction:column;padding:12px}
+    .stage{width:100%;height:62vh;min-height:380px}
+    .panel{width:100%}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="stage" id="stage">
+    <canvas id="game" width="900" height="650"></canvas>
+    <div class="touchHint" id="touchHint">Touch: Left / Right to steer • Swipe up for boost</div>
+  </div>
+
+  <div class="panel">
+    <h3>Controls & Modes</h3>
+
+    <div class="row">
+      <label style="flex:1">Mode</label>
+      <select id="mode">
+        <option value="normal">Normal</option>
+        <option value="high">High</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <button id="start" class="btn primary big">Start</button>
+      <button id="pause" class="btn small">Pause</button>
+      <button id="restart" class="btn small">Restart</button>
+    </div>
+
+    <div class="row">
+      <button id="mute" class="btn small">Mute SFX</button>
+      <button id="music" class="btn small">Music Off</button>
+      <label style="flex:1">Car Color</label>
+      <input id="carColor" type="color" value="#ff3b3b" />
+    </div>
+
+    <div>
+      <label>Speed</label>
+      <input id="speedRange" type="range" min="3" max="14" step="0.2" value="6" />
+      <div class="speedBtns" style="margin-top:8px">
+        <button id="speedDown" class="btn">−</button>
+        <button id="speedUp" class="btn">+</button>
+        <div style="flex:1;text-align:right"><small class="muted">Use ↑/↓ or buttons</small></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <div class="stat" style="flex:1">
+        <p style="font-size:12px;margin:0">Score</p>
+        <p id="uiScore" style="font-size:20px;margin:4px 0">0</p>
+      </div>
+      <div class="stat" style="flex:1">
+        <p style="font-size:12px;margin:0">Lives</p>
+        <p id="uiLives" style="font-size:20px;margin:4px 0">3</p>
+      </div>
+    </div>
+
+    <div style="margin-top:8px">
+      <label style="display:block">Quick Tips</label>
+      <ul style="margin:6px 0 0 18px;color:var(--muted)">
+        <li>← → or A/D — Move</li>
+        <li>↑ — Increase speed; ↓ — Decrease speed</li>
+        <li>Tap left/right on mobile to steer. Swipe up for short boost.</li>
+      </ul>
+    </div>
+
+    <div style="margin-top:auto">
+      <p class="muted" style="font-size:12px;margin:0">Day/Night cycle: switches every 30s. Night enables headlights.</p>
+    </div>
+  </div>
+</div>
+
+<div id="gameOver" class="overlay">
+  <h2 style="margin:0 0 8px 0">Game Over</h2>
+  <p id="finalScore">Score: 0</p>
+  <div style="margin-top:12px;text-align:center">
+    <button id="goRestart" class="btn primary">Restart</button>
+  </div>
+</div>
+
+<script>
+/* Final Pro Game with Music toggle + Speed controls
+   - Mobile touch controls (hold left/right, swipe up for boost)
+   - Keyboard controls for desktop
+   - Music On/Off + Mute SFX
+   - Day/Night cycle every 30s
+   - Coins, traffic, collision, lives
+*/
+
+// IIFE to avoid globals
+(function(){
+  // Canvas setup
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const stage = document.getElementById('stage');
+
+  // UI elements
+  const startBtn = document.getElementById('start');
+  const pauseBtn = document.getElementById('pause');
+  const restartBtn = document.getElementById('restart');
+  const goRestart = document.getElementById('goRestart');
+  const muteBtn = document.getElementById('mute');
+  const musicBtn = document.getElementById('music');
+  const modeSel = document.getElementById('mode');
+  const carColorInput = document.getElementById('carColor');
+  const speedRange = document.getElementById('speedRange');
+  const speedUpBtn = document.getElementById('speedUp');
+  const speedDownBtn = document.getElementById('speedDown');
+  const uiScore = document.getElementById('uiScore');
+  const uiLives = document.getElementById('uiLives');
+  const gameOverOverlay = document.getElementById('gameOver');
+  const finalScoreEl = document.getElementById('finalScore');
+  const touchHint = document.getElementById('touchHint');
+
+  // State variables
+  let W=900,H=650;
+  let running=false, paused=false;
+  let score=0, lives=3;
+  let enemies=[], coins=[], particles=[];
+  let lastTime=0, spawnTimer=0, startTimestamp=null;
+  const cycleSeconds = 30; // half-cycle
+  let keys = {};
+  let touchState = {active:false, side:null, startY:0, curY:0};
+  let audioCtx = null;
+  let sfxMuted = false;
+  let musicPlaying = false;
+  let musicOsc = null;
+  let musicGain = null;
+
+  // Player object
+  const player = {
+    w:56,h:86,x:0,y:0,color:carColorInput.value,speed:parseFloat(speedRange.value),boostUntil:0
+  };
+
+  // initial canvas visual sizing and internal buffer
+  function resizeCanvas(){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const cssW = rect.width, cssH = rect.height;
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.max(720, Math.round(cssW * ratio));
+    canvas.height = Math.max(520, Math.round(cssH * ratio));
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    W = canvas.width; H = canvas.height;
+    computeLanes();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  // lanes compute
+  let laneCenters = [];
+  function computeLanes(){
+    const roadW = Math.min(W*0.66, 520 * (window.devicePixelRatio || 1));
+    const roadX = (W - roadW) / 2;
+    laneCenters = [
+      roadX + roadW*0.18,
+      roadX + roadW*0.5,
+      roadX + roadW*0.82
+    ];
+    player.x = laneCenters[1] - player.w/2;
+    player.y = H - Math.round(120 * (window.devicePixelRatio || 1));
+  }
+
+  // helpers
+  function rand(min,max){ return Math.random()*(max-min)+min; }
+  function rectHit(a,b){ return !(a.x + a.w < b.x || a.x > b.x + (b.w||0) || a.y + a.h < b.y || a.y > b.y + (b.h||0)); }
+
+  // Audio utilities
+  function ensureAudio(){
+    if(!audioCtx && !sfxMuted){
+      try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ audioCtx = null; }
+    }
+  }
+  function sfxBeep(freq=880,dur=0.06,vol=0.03){
+    if(sfxMuted) return;
+    ensureAudio();
+    if(!audioCtx) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type='sine';
+    o.frequency.setValueAtTime(freq,audioCtx.currentTime);
+    g.gain.setValueAtTime(vol,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur + 0.02);
+  }
+
+  // Background music using a gentle oscillator-ish pad (simple, light)
+  function startMusic(){
+    if(musicPlaying) return;
+    ensureAudio();
+    if(!audioCtx) return;
+    musicOsc = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    musicGain = audioCtx.createGain();
+    musicOsc.type = 'sine';
+    osc2.type = 'sine';
+    musicOsc.frequency.setValueAtTime(120, audioCtx.currentTime);
+    osc2.frequency.setValueAtTime(200, audioCtx.currentTime);
+    musicGain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+    musicOsc.connect(musicGain);
+    osc2.connect(musicGain);
+    musicGain.connect(audioCtx.destination);
+    musicOsc.start();
+    osc2.start();
+    musicPlaying = true;
+  }
+  function stopMusic(){
+    if(!musicPlaying || !audioCtx) return;
+    try{
+      musicOsc.stop(); // second oscillator (osc2) is not referenced; safe to rely on garbage
+    }catch(e){}
+    musicOsc = null; musicGain = null;
+    musicPlaying = false;
+    // suspend audio if no sfx desired
+  }
+
+  // spawn enemy
+  function createEnemy(){
+    const lane = laneCenters[Math.floor(rand(0, laneCenters.length))];
+    const w = 44 + Math.random()*20;
+    const h = 70;
+    const speedBase = (modeSel.value === 'high') ? 3.2 : 2.2;
+    const speed = speedBase + Math.random()*1.8 + (score/600);
+    const colors = ['#2b6cff','#9b59ff','#f39c12','#16a085','#ff6b6b'];
+    const color = colors[Math.floor(rand(0, colors.length))];
+    return {x: lane - w/2, y: -Math.random()*600 - 120, w, h, speed, color, type:'enemy'};
+  }
+
+  // spawn coin
+  function createCoin(){
+    const lane = laneCenters[Math.floor(rand(0, laneCenters.length))];
+    return {x: lane, y: -30 - Math.random()*200, r:10, value:20};
+  }
+
+  // particles
+  function spawnParticles(x,y,color){
+    for(let i=0;i<10;i++){
+      particles.push({
+        x,y,
+        vx:(Math.random()-0.5)*3,
+        vy:-Math.random()*2 - 1,
+        life:600 + Math.random()*400,
+        t:0,
+        color
+      });
+    }
+  }
+
+  // clamp player within road
+  function clampPlayer(){
+    const roadW = Math.min(W*0.66, 520*(window.devicePixelRatio||1));
+    const roadX = (W - roadW)/2;
+    const minX = roadX + 12;
+    const maxX = roadX + roadW - player.w - 12;
+    if(player.x < minX) player.x = minX;
+    if(player.x > maxX) player.x = maxX;
+  }
+
+  // drawing helpers
+  function roundRect(ctx, x, y, w, h, r, fill){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+    if(fill) ctx.fill(); else ctx.stroke();
+  }
+  function shadeColor(col, percent){
+    const f = parseInt(col.slice(1),16);
+    const t = percent<0?0:255; const p=Math.abs(percent);
+    const R = f>>16, G=(f>>8)&0x00FF, B=f&0x0000FF;
+    const newR = Math.round((t-R)*p)+R;
+    const newG = Math.round((t-G)*p)+G;
+    const newB = Math.round((t-B)*p)+B;
+    return `rgb(${newR},${newG},${newB})`;
+  }
+
+  // draw scene and entities
+  function drawScene(ts, isNight){
+    // background
+    if(isNight){
+      const g = ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#07121a'); g.addColorStop(1,'#041018');
+      ctx.fillStyle = g;
+    } else {
+      const g = ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#2b5d78'); g.addColorStop(1,'#071426');
+      ctx.fillStyle = g;
+    }
+    ctx.fillRect(0,0,W,H);
+
+    // road
+    const roadW = Math.min(W*0.66, 520*(window.devicePixelRatio||1));
+    const roadX = (W - roadW)/2;
+    const roadGrad = ctx.createLinearGradient(0,0,0,H);
+    roadGrad.addColorStop(0, isNight? '#0b1116' : '#1b2B36');
+    roadGrad.addColorStop(1, isNight? '#071018' : '#07121d');
+    ctx.fillStyle = roadGrad;
+    roundRect(ctx, roadX, 0, roadW, H, 22, true);
+
+    // sides
+    ctx.fillStyle = isNight? '#02110a' : '#10321a';
+    ctx.fillRect(roadX - 60, 0, 60, H);
+    ctx.fillRect(roadX + roadW, 0, 60, H);
+
+    // lane markers
+    ctx.strokeStyle = isNight? 'rgba(255,255,200,0.06)' : 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 6 * (window.devicePixelRatio||1);
+    for(let i=1;i<3;i++){
+      const lx = roadX + (roadW/3)*i;
+      ctx.save(); ctx.setLineDash([30,20]); ctx.beginPath(); ctx.moveTo(lx,0); ctx.lineTo(lx,H); ctx.stroke(); ctx.restore();
+    }
+    // night center glow
+    if(isNight){
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const glow = ctx.createLinearGradient(0,0,0,H);
+      glow.addColorStop(0,'rgba(255,240,200,0.02)'); glow.addColorStop(1,'rgba(255,240,200,0)');
+      ctx.fillStyle = glow; ctx.fillRect(roadX + roadW/2 - 40, 0, 80, H); ctx.restore();
+    }
+  }
+
+  function drawCar(c, isPlayer=false, isNight=false){
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.ellipse(c.x + c.w/2, c.y + c.h - 6, c.w*0.55, 8, 0, 0, Math.PI*2); ctx.fill();
+
+    const g = ctx.createLinearGradient(c.x, c.y, c.x, c.y + c.h);
+    g.addColorStop(0, shadeColor(c.color, 0.12)); g.addColorStop(1, shadeColor(c.color, -0.18));
+    ctx.fillStyle = g; roundRect(ctx, c.x, c.y, c.w, c.h, 10, true);
+
+    ctx.fillStyle = isNight? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.22)';
+    roundRect(ctx, c.x + c.w*0.12, c.y + c.h*0.12, c.w*0.76, c.h*0.34, 6, true);
+
+    if(isPlayer && isNight){
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const headGrad = ctx.createLinearGradient(c.x, c.y, c.x + c.w, c.y + c.h*1.3);
+      headGrad.addColorStop(0,'rgba(255,240,200,0.18)'); headGrad.addColorStop(1,'rgba(255,240,200,0)');
+      ctx.fillStyle = headGrad; ctx.beginPath();
+      ctx.ellipse(c.x + c.w/2, c.y + c.h*0.22, c.w*1.6, c.h*2.2, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+      ctx.fillStyle='rgba(255,250,200,0.95)'; ctx.fillRect(c.x + 8, c.y + 8, 10, 6); ctx.fillRect(c.x + c.w - 18, c.y + 8, 10, 6);
+    } else {
+      ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(c.x + 8, c.y + 8, 8, 5); ctx.fillRect(c.x + c.w - 16, c.y + 8, 8, 5);
+    }
+    ctx.restore();
+  }
+
+  function drawCoin(c){
+    ctx.save();
+    ctx.beginPath(); ctx.fillStyle='rgba(255,200,60,0.14)'; ctx.arc(c.x, c.y, c.r*1.8, 0, Math.PI*2); ctx.fill();
+    const g = ctx.createLinearGradient(c.x - c.r, c.y - c.r, c.x + c.r, c.y + c.r);
+    g.addColorStop(0,'#ffd66b'); g.addColorStop(1,'#ffb347'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(c.x - c.r*0.22, c.y - c.r*0.22, c.r*0.36, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawParticle(p){
+    ctx.save(); ctx.globalAlpha = Math.max(0, 1 - p.t / p.life); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill(); ctx.restore();
+  }
+
+  // main game loop
+  function gameLoop(ts){
+    if(!startTimestamp) startTimestamp = ts;
+    const elapsed = (ts - startTimestamp) / 1000;
+    const phase = Math.floor(elapsed / cycleSeconds) % 2;
+    const isNight = (phase === 1);
+
+    if(!running || paused){ lastTime = ts; requestAnimationFrame(gameLoop); return; }
+    const dt = Math.min(60, ts - lastTime); lastTime = ts;
+
+    // spawn logic
+    spawnTimer += dt;
+    const spawnInterval = (modeSel.value === 'high') ? 700 : 1000;
+    if(spawnTimer > spawnInterval){
+      enemies.push(createEnemy());
+      if(Math.random() < 0.45) enemies.push(createEnemy());
+      if(Math.random() < 0.45) coins.push(createCoin());
+      spawnTimer = 0;
+    }
+
+    // update enemies
+    for(let i=enemies.length-1;i>=0;i--){
+      const e = enemies[i]; e.y += e.speed * (dt/16);
+      if(e.y > H + 140) enemies.splice(i,1);
+    }
+
+    // update coins
+    for(let i=coins.length-1;i>=0;i--){
+      const c = coins[i]; c.y += (2.6 * (modeSel.value==='high'?1.2:1)) * (dt/16);
+      if(c.y > H + 40) coins.splice(i,1);
+    }
+
+    // controls: keyboard
+    if(keys['arrowleft'] || keys['a']) player.x -= player.speed * (dt/16);
+    if(keys['arrowright'] || keys['d']) player.x += player.speed * (dt/16);
+
+    // touch hold
+    if(touchState.active && touchState.side === 'left') player.x -= player.speed * (dt/16);
+    if(touchState.active && touchState.side === 'right') player.x += player.speed * (dt/16);
+
+    // clamp
+    clampPlayer();
+
+    // enemies collision
+    for(let i=enemies.length-1;i>=0;i--){
+      const e = enemies[i];
+      if(rectHit({x:player.x,y:player.y,w:player.w,h:player.h},{x:e.x,y:e.y,w:e.w,h:e.h})){
+        enemies.splice(i,1);
+        lives -= 1; uiLives.textContent = lives; spawnParticles(player.x + player.w/2, player.y + player.h/2, '#ff6b6b');
+        sfxBeep(220,0.12,0.06);
+        if(lives <= 0){ endGame(); return; }
+      }
+    }
+
+    // coin collect
+    for(let i=coins.length-1;i>=0;i--){
+      const c = coins[i];
+      if(c.x > player.x && c.x < player.x + player.w && c.y > player.y && c.y < player.y + player.h){
+        score += c.value; uiScore.textContent = score; spawnParticles(c.x, c.y, '#ffd66b'); sfxBeep(990,0.04,0.03);
+        coins.splice(i,1);
+      }
+    }
+
+    // particles update
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.x += p.vx * (dt/16);
+      p.y += p.vy * (dt/16);
+      p.vy += 0.06 * (dt/16);
+      p.t += dt;
+      if(p.t > p.life) particles.splice(i,1);
+    }
+
+    // boost handling (swipe up)
+    if(player.boostUntil > ts) player.speed = Math.min(14, parseFloat(speedRange.value) * 1.8);
+    else player.speed = parseFloat(speedRange.value);
+
+    // draw everything
+    ctx.clearRect(0,0,W,H);
+    drawScene(ts, isNight);
+    coins.forEach(drawCoin);
+    enemies.forEach(e => drawCar(e, false, isNight));
+    drawCar({x:player.x,y:player.y,w:player.w,h:player.h,color:player.color}, true, isNight);
+    particles.forEach(drawParticle);
+
+    // HUD text
+    ctx.save();
+    ctx.font = `${14 * (window.devicePixelRatio||1)}px Inter, sans-serif`;
+    ctx.fillStyle = isNight ? 'rgba(255,255,220,0.9)' : 'rgba(255,255,255,0.95)';
+    ctx.fillText(`Mode: ${modeSel.value.toUpperCase()} • ${isNight? 'NIGHT' : 'DAY'}`, 20, 28);
+    ctx.restore();
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  function endGame(){
+    running = false; paused = false;
+    gameOverOverlay.style.display = 'block';
+    finalScoreEl.textContent = 'Score: ' + score;
+    sfxBeep(120,0.18,0.08);
+  }
+
+  // input handlers: keyboard
+  window.addEventListener('keydown', e => {
+    keys[e.key.toLowerCase()] = true;
+    if(e.key === ' ' && !running){ start(); }
+    if(e.key === 'r') restart();
+    if(e.key === 'ArrowUp'){ // increase speed
+      let v = parseFloat(speedRange.value); v = Math.min(14, v+0.5); speedRange.value = v; player.speed = v;
+    }
+    if(e.key === 'ArrowDown'){ let v = parseFloat(speedRange.value); v = Math.max(3, v-0.5); speedRange.value = v; player.speed = v; }
+    if(e.key === 'Escape'){ paused = !paused; pauseBtn.textContent = paused ? 'Resume' : 'Pause'; if(!paused){ lastTime = performance.now(); requestAnimationFrame(gameLoop); } }
+  });
+  window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+  // pointer/touch handlers on canvas
+  canvas.addEventListener('pointerdown', e => {
+    // create audio context on user gesture for mobile autoplay rules
+    if(!audioCtx && !sfxMuted){
+      try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(err){ audioCtx=null; }
+    }
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    touchState.active = true; touchState.startY = y; touchState.curY = y;
+    touchState.side = (x < rect.width/2) ? 'left' : 'right';
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', e => {
+    if(!touchState.active) return;
+    const rect = canvas.getBoundingClientRect();
+    touchState.curY = e.clientY - rect.top;
+  });
+  canvas.addEventListener('pointerup', e => {
+    if(!touchState.active) return;
+    const dy = touchState.startY - touchState.curY;
+    if(dy > 60){ // swipe up -> boost
+      player.boostUntil = performance.now() + 900;
+      sfxBeep(1400,0.06,0.04);
+    }
+    touchState.active = false; touchState.side = null;
+    try{ canvas.releasePointerCapture(e.pointerId); }catch(err){}
+  });
+  canvas.addEventListener('pointercancel', () => { touchState.active=false; touchState.side=null; });
+
+  // UI wiring (buttons)
+  startBtn.addEventListener('click', () => {
+    // resume audio context if available (mobile)
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    if(!audioCtx && !sfxMuted) { try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){} }
+    start();
+  });
+  pauseBtn.addEventListener('click', () => {
+    if(!running) return;
+    paused = !paused; pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+    if(!paused){ lastTime = performance.now(); requestAnimationFrame(gameLoop); }
+  });
+  restartBtn.addEventListener('click', restart);
+  goRestart.addEventListener('click', restart);
+
+  muteBtn.addEventListener('click', () => {
+    sfxMuted = !sfxMuted; muteBtn.textContent = sfxMuted ? 'Unmute SFX' : 'Mute SFX';
+    if(sfxMuted && audioCtx) audioCtx.suspend(); else if(!sfxMuted && audioCtx) audioCtx.resume();
+  });
+
+  musicBtn.addEventListener('click', () => {
+    if(!musicPlaying){
+      // start music
+      if(!audioCtx) try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+      startMusic();
+      musicBtn.textContent = 'Music On';
+    } else {
+      stopMusic();
+      musicBtn.textContent = 'Music Off';
+    }
+  });
+
+  carColorInput.addEventListener('input', e => { player.color = e.target.value; });
+  speedRange.addEventListener('input', e => { player.speed = parseFloat(e.target.value); });
+  speedUpBtn.addEventListener('click', () => { let v = parseFloat(speedRange.value); v = Math.min(14, +(v+0.5).toFixed(1)); speedRange.value = v; player.speed = v; });
+  speedDownBtn.addEventListener('click', () => { let v = parseFloat(speedRange.value); v = Math.max(3, +(v-0.5).toFixed(1)); speedRange.value = v; player.speed = v; });
+
+  modeSel.addEventListener('change', () => { /* mode effect automatic in spawn speeds */ });
+
+  // start & restart logic
+  function start(){
+    if(running) return;
+    if(!startTimestamp) startTimestamp = performance.now();
+    running = true; paused = false;
+    score = 0; lives = 3;
+    enemies = []; coins = []; particles = [];
+    spawnTimer = 0;
+    uiScore.textContent = score; uiLives.textContent = lives;
+    gameOverOverlay.style.display = 'none';
+    player.color = carColorInput.value;
+    player.speed = parseFloat(speedRange.value);
+    computeLanes();
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+  }
+  function restart(){
+    running = false; paused = false;
+    score = 0; lives = 3;
+    enemies = []; coins = []; particles = [];
+    uiScore.textContent = score; uiLives.textContent = lives;
+    gameOverOverlay.style.display = 'none';
+    startTimestamp = null;
+    computeLanes();
+    player.speed = parseFloat(speedRange.value);
+    player.color = carColorInput.value;
+    setTimeout(()=> start(), 120);
+  }
+
+  // initial setup & small demo
+  function init(){
+    if(!canvas.style.width) {
+      const stageRect = canvas.parentElement.getBoundingClientRect();
+      canvas.style.width = stageRect.width + 'px';
+      canvas.style.height = stageRect.height + 'px';
+    }
+    resizeCanvas();
+    for(let i=0;i<2;i++) enemies.push(createEnemy());
+    for(let i=0;i<1;i++) coins.push(createCoin());
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+  }
+
+  // Kick off
+  init();
+
+  // expose nothing global
+})();
+</script>
+</body>
+</html>
